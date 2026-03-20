@@ -8,6 +8,10 @@ Usage:
 """
 
 import argparse
+import logging
+
+from telegram import Update
+from telegram.ext import Application, CommandHandler, ContextTypes
 
 from config import settings
 from handlers import (
@@ -17,6 +21,12 @@ from handlers import (
     handle_scores,
     handle_start,
 )
+
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO,
+)
+logger = logging.getLogger(__name__)
 
 
 def get_handler(command: str) -> callable:
@@ -29,6 +39,17 @@ def get_handler(command: str) -> callable:
         "/scores": handle_scores,
     }
     return handlers.get(command)
+
+
+async def telegram_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle Telegram commands."""
+    command = update.message.text.split()[0] if update.message.text else "/start"
+    handler = get_handler(command)
+    if handler:
+        response = handler()
+        await update.message.reply_text(response)
+    else:
+        await update.message.reply_text("Unknown command. Use /help for available commands.")
 
 
 def main():
@@ -49,9 +70,15 @@ def main():
         else:
             print(f"Unknown command: {args.test}")
     else:
-        # Telegram mode: will be implemented later
-        print("Telegram bot mode will be implemented in Task 1.")
-        print("For now, use --test mode to test handlers.")
+        # Telegram mode
+        logger.info("Starting Telegram bot...")
+        app = Application.builder().token(settings.bot_token).build()
+        app.add_handler(CommandHandler("start", telegram_handler))
+        app.add_handler(CommandHandler("help", telegram_handler))
+        app.add_handler(CommandHandler("health", telegram_handler))
+        app.add_handler(CommandHandler("labs", telegram_handler))
+        app.add_handler(CommandHandler("scores", telegram_handler))
+        app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 
 if __name__ == "__main__":
