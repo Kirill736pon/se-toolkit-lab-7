@@ -91,3 +91,88 @@ By the end of this lab, you should be able to say:
 2. [Backend Integration](./lab/tasks/required/task-2.md) — P0: slash commands + real data
 3. [Intent-Based Natural Language Routing](./lab/tasks/required/task-3.md) — P1: LLM tool use
 4. [Containerize and Document](./lab/tasks/required/task-4.md) — P3: containerize + deploy
+
+## Deploy
+
+### Prerequisites
+
+Before deploying, ensure you have:
+
+- `.env.docker.secret` in the project root with backend and bot credentials
+- `.env.bot.secret` in the project root with bot token and API keys
+- Docker and Docker Compose installed on the VM
+
+### Environment variables
+
+The bot requires these variables in `.env.docker.secret`:
+
+```env
+# Telegram bot token (from @BotFather)
+BOT_TOKEN=your-telegram-bot-token
+
+# LMS backend URL (inside Docker network)
+LMS_API_URL=http://backend:8000
+LMS_API_KEY=your-lms-api-key
+
+# LLM API credentials
+LLM_API_KEY=your-qwen-api-key
+LLM_API_BASE_URL=http://host.docker.internal:42005/v1
+LLM_API_MODEL=coder-model
+```
+
+> **Note:** `host.docker.internal` is used because the Qwen Code API proxy runs on a separate Docker network.
+
+### Deploy commands
+
+1. **Stop the background bot process** (if running):
+   ```bash
+   cd ~/se-toolkit-lab-7
+   pkill -f "bot.py" 2>/dev/null
+   ```
+
+2. **Build and start all services**:
+   ```bash
+   docker compose --env-file .env.docker.secret up --build -d
+   ```
+
+3. **Verify services are running**:
+   ```bash
+   docker compose --env-file .env.docker.secret ps
+   ```
+
+   You should see `bot`, `backend`, `postgres`, `caddy` all running.
+
+4. **Check bot logs**:
+   ```bash
+   docker compose --env-file .env.docker.secret logs bot --tail 20
+   ```
+
+   Look for "Starting Telegram bot..." and no Python tracebacks.
+
+### Verify in Telegram
+
+Send these commands to your bot:
+
+1. `/start` — should show welcome message with inline keyboard
+2. `/health` — should show backend status
+3. "what labs are available?" — natural language query
+4. "which lab has the lowest pass rate?" — multi-step reasoning
+
+### Troubleshooting
+
+| Symptom | Solution |
+|---------|----------|
+| Bot container restarting | Check logs: `docker compose logs bot` |
+| `/health` fails | Verify `LMS_API_URL=http://backend:8000` |
+| LLM queries fail | Verify `LLM_API_BASE_URL` uses `host.docker.internal` |
+| "BOT_TOKEN is required" | Add to `.env.docker.secret` |
+
+### Update deployment
+
+After code changes:
+
+```bash
+cd ~/se-toolkit-lab-7
+git pull
+docker compose --env-file .env.docker.secret up --build -d
+```
