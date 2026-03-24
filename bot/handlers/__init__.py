@@ -1,6 +1,6 @@
 """Bot command handlers."""
 
-from .commands import (
+from .commands.__init__ import (
     handle_help,
     handle_health,
     handle_labs,
