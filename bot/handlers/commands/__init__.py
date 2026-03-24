@@ -8,6 +8,28 @@ def handle_start() -> str:
     return "Welcome! I'm your LMS assistant bot. Use /help to see available commands."
 
 
+def handle_start_with_keyboard() -> tuple[str, any]:
+    """
+    Handle /start command with inline keyboard.
+
+    Returns:
+        Tuple of (message_text, keyboard_markup)
+    """
+    from handlers.keyboards import get_start_keyboard
+
+    message = """Welcome! I'm your LMS assistant bot.
+
+I can help you with:
+• Viewing available labs and tasks
+• Checking scores and pass rates
+• Finding top students
+• Comparing group performance
+
+Click a button below to try a query, or just ask me anything!"""
+
+    return message, get_start_keyboard()
+
+
 def handle_help() -> str:
     """Handle /help command."""
     return """Available commands:
