@@ -29,6 +29,22 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def parse_command_args(test_input: str) -> tuple[str, str]:
+    """
+    Parse command and arguments from test input.
+
+    Args:
+        test_input: Full command string (e.g., "/scores lab-04")
+
+    Returns:
+        Tuple of (command, argument). E.g., ("/scores", "lab-04")
+    """
+    parts = test_input.strip().split(maxsplit=1)
+    command = parts[0] if parts else ""
+    arg = parts[1] if len(parts) > 1 else ""
+    return command, arg
+
+
 def get_handler(command: str) -> callable:
     """Get the handler function for a command."""
     handlers = {
@@ -43,10 +59,17 @@ def get_handler(command: str) -> callable:
 
 async def telegram_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle Telegram commands."""
-    command = update.message.text.split()[0] if update.message.text else "/start"
+    text = update.message.text or ""
+    parts = text.split(maxsplit=1)
+    command = parts[0]
+    arg = parts[1] if len(parts) > 1 else ""
+
     handler = get_handler(command)
     if handler:
-        response = handler()
+        if command == "/scores":
+            response = handler(arg)
+        else:
+            response = handler()
         await update.message.reply_text(response)
     else:
         await update.message.reply_text("Unknown command. Use /help for available commands.")
@@ -58,17 +81,21 @@ def main():
         "--test",
         type=str,
         metavar="COMMAND",
-        help="Test a command (e.g., --test '/start')",
+        help="Test a command (e.g., --test '/start' or --test '/scores lab-04')",
     )
     args = parser.parse_args()
 
     if args.test:
-        # Test mode: call handler and print result
-        handler = get_handler(args.test)
+        # Test mode: parse command and args, call handler, print result
+        command, arg = parse_command_args(args.test)
+        handler = get_handler(command)
         if handler:
-            print(handler())
+            if command == "/scores":
+                print(handler(arg))
+            else:
+                print(handler())
         else:
-            print(f"Unknown command: {args.test}")
+            print(f"Unknown command: {command}")
     else:
         # Telegram mode
         logger.info("Starting Telegram bot...")
